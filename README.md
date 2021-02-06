@@ -3,7 +3,7 @@
 It is an annotation tool for create training data of Instance segmentation, such as Mask R-CNN or YOLACT
 
 
-[https://youtu.be/Z1RKNU1CqGM:embed:cite]
+https://youtu.be/Z1RKNU1CqGM
 
 
 <br>  
