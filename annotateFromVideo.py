@@ -5,6 +5,8 @@ import time
 import os
 import base64
 import random
+import pathlib
+import re
 # from matplotlib import pyplot as plt
 
 
@@ -391,10 +393,12 @@ while True:
 
     # 学習精度向上を目指し、データ拡張を行う
     # for count in range(2):
+    max_index = max([int(re.search(r'\((.*)\)', str(path)).group(1)) for path in pathlib.Path('./background/').glob('*.jpg')])
+
     for count in range(10):
         size = random.uniform(0.6,1.2)
         degree = random.uniform(-30,30)
-        backImgNum = int(random.uniform(1,1001))
+        backImgNum = int(random.uniform(1,max_index))
         centerX = random.random()
         centerY = random.random()
 
