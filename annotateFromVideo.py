@@ -202,7 +202,7 @@ def outputResults(
         f.write("\t],\n")
         f.write("\t\"lineColor\": [0,255,0,128],\n")
         f.write("\t\"fillColor\": [255,0,0,128],\n")
-        f.write("\t\"imagePath\": \"" + videoTime + ".jpg\",\n")
+        f.write("\t\"imagePath\": \"{}/".format(pathlib.Path(output_path).name) + videoTime + ".jpg\",\n")
         f.write("\t\"imageData\": \"" + (img_base64).decode() + "\",\n")  # 最初に 「b'」 という文字が入らないようにdecode
         f.write("\t\"imageHeight\": " + str(smallHeight) + ",\n")
         f.write("\t\"imageWidth\": " + str(smallWidth) + "\n")
@@ -219,10 +219,10 @@ microWidth = 550  # 輪郭抽出時の処理が多少重たいのでそのとき
 
 # 処理する動画を読み込み、処理に必要な複製等を用意
 video_dir = pathlib.Path('./videos')
-video_files = [p for p in video_dir.glob('**/*') if p.is_file()]
-indices = [int(str(p).split('_')[0])
+video_files = [p for p in video_dir.glob('**/*') if p.is_file() and p.name != '.gitkeep']
+indices = [int(str(p.name).split('_')[0])
            for p in pathlib.Path(output_path).glob('*')]
-background_files = pathlib.Path('./background').glob('*')
+background_files = [p for p in pathlib.Path('./background').glob('*') if p.is_file() and p.name != '.gitkeep']
 if indices:
     prefix = np.max(indices) + 1
 else:
