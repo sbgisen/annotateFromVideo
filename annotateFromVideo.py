@@ -210,297 +210,306 @@ microWidth = 550 # 輪郭抽出時の処理が多少重たいのでそのとき�
 
 
 # 処理する動画を読み込み、処理に必要な複製等を用意
-video = cv2.VideoCapture(args[1])
-labelName = args[2]
-# ex) labelName = "controller"
+video_dir = pathlib.Path('./videos')
+video_files = [p for p in video_dir.glob('**/*') if p.is_file()]
+indices = [int(str(p).split('_')[0]) for p in pathlib.Path('./outputImages').glob('*')]
+if indices:
+    index = np.max(indices)
+else:
+    index = 0
 
-width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH)) # 動画の画面横幅
-height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT)) # 動画の画面縦幅
-frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) # 総フレーム数
-frame_rate = video.get(cv2.CAP_PROP_FPS) # フレームレート(fps)
-color = (255,255,255) # マウスでの描画色
+for j, video_file in enumerate(video_files):
+    video = cv2.VideoCapture(str(video_file))
+    labelName = video_file.parent.name
+    # ex) labelName = "controller"
 
-
-videoTime = 0
-video.set(cv2.CAP_PROP_POS_FRAMES, int(videoTime * frame_rate))
-ret, img = video.read()
-
-# 縮小
-smallHeight = int(img.shape[0]*smallWidth/img.shape[1])
-img = cv2.resize(img, (smallWidth,smallHeight))
-
-img_raw = img.copy() # 自由に位置を指定できるやつ用のimg
-img2 = img.copy() # 自由に位置を指定できるやつ用のimg
-temp = img.copy() # 自由に位置を指定できるやつ用のimg
-
-mask = np.zeros(img.shape[:2],np.uint8)
-previousMask = np.zeros(img.shape[:2],np.uint8)
-newmask2 = np.zeros(img.shape[:2],np.uint8) # マウスでマスク画像を描いていく
-newmask2 = newmask2+128
-
-bgdModel = np.zeros((1,65),np.float64)
-fgdModel = np.zeros((1,65),np.float64)
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH)) # 動画の画面横幅
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT)) # 動画の画面縦幅
+    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) # 総フレーム数
+    frame_rate = video.get(cv2.CAP_PROP_FPS) # フレームレート(fps)
+    color = (255,255,255) # マウスでの描画色
 
 
-
-while True:
-    # video.set(cv2.CAP_PROP_POS_FRAMES, int(videoTime * frame_rate))
-    video.set(cv2.CAP_PROP_POS_FRAMES, int((videoTime) * frame_rate))
+    videoTime = 0
+    video.set(cv2.CAP_PROP_POS_FRAMES, int(videoTime * frame_rate))
     ret, img = video.read()
-    # 動画終了
-    if not ret:  
-        break
 
-    # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-    filePath = "./outputImages/" + str(videoTime) + ".json"
-    try:
-        with open(filePath, mode='x') as f:
-            print("make file : " + filePath)
-    except:
-        print(filePath + " is already done!")
-        videoTime+=1
-        continue
-
-
+    # 縮小
+    smallHeight = int(img.shape[0]*smallWidth/img.shape[1])
     img = cv2.resize(img, (smallWidth,smallHeight))
-    img_raw = img.copy()
-    img2 = img.copy()
 
-    mask = mask*0
+    img_raw = img.copy() # 自由に位置を指定できるやつ用のimg
+    img2 = img.copy() # 自由に位置を指定できるやつ用のimg
+    temp = img.copy() # 自由に位置を指定できるやつ用のimg
+
+    mask = np.zeros(img.shape[:2],np.uint8)
+    previousMask = np.zeros(img.shape[:2],np.uint8)
     newmask2 = np.zeros(img.shape[:2],np.uint8) # マウスでマスク画像を描いていく
     newmask2 = newmask2+128
 
-    # grabCut用の初期化
-    draw_line.flag = False
-    draw_line.befx = 0
-    draw_line.befy = 0
-
-    # ↓ 処理開始 ↓
-    #真ん中の方のみを抽出
-    # rect = (int(smallWidth/10), int(smallHeight/10), int(smallWidth*8/10), int(smallHeight*8/10))
-    rect = (1, 1, smallWidth-2, smallHeight-2)
-    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,3,cv2.GC_INIT_WITH_RECT)
-
-    mask2 = np.where((mask==2)|(mask==0),2,3).astype('uint8')
-    mask3 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
-
-    temp = mask.copy()
-    mask[previousMask == 2] = 2
-    # cv2.imshow("prev", previousMask*50)
-
-    cv2.namedWindow('img_temp')
-    cv2.setMouseCallback('img_temp',draw_line)
+    bgdModel = np.zeros((1,65),np.float64)
+    fgdModel = np.zeros((1,65),np.float64)
 
 
-    img2 = grabWithImg(mask2, False)
-    img_temp = img2.copy() # 自由に位置を指定できるやつ用のimg
-    img_temp_rotated = img2.copy() # 自由に位置を指定できるやつ用のimg
 
-    while(1):
-        # mask[(mask == 2)] = 127
-        # mask[(mask == 3)] = 200
-        # mask[mask == 1] = 255
-        cv2.imshow("mask", mask*85)
-        # mask[mask == 255] = 1 # いらない気がする
-
-        cv2.imshow('raw',img_raw)
-        cv2.imshow('newmask2',newmask2)
-        cv2.imshow('img_temp',img_temp)
-
-
-        key = cv2.waitKey(20)
-        if key == 119:  # "w"キーを入力で、前景（白）をimg_temp windowに描画できるように
-            print("white")
-            color = (255,255,255)
-        elif key == 98:  # "b"
-            print("black")
-            color = (0,0,0)
-        elif key == 103:  # "g"キーを入力で、grabCutを実行
-            img2 = grabWithImg(mask2, False)
-            img_temp = img2.copy() # 自由に位置を指定できるやつ用のimg
-        elif key == 27:  # "ESC"キーを入力で、前景と背景のおおよその分離を終了
-            img2 = grabWithImg(mask2, True)
+    while True:
+        # video.set(cv2.CAP_PROP_POS_FRAMES, int(videoTime * frame_rate))
+        video.set(cv2.CAP_PROP_POS_FRAMES, int((videoTime) * frame_rate))
+        ret, img = video.read()
+        # 動画終了
+        if not ret:  
             break
-        elif key == 113:  # "q"キーを入力で、プログラムを途中終了
-            exit()
 
-    # cv2.destroyAllWindows()
-    previousMask = mask  # 1つ過去のマスク画像を、次のマスク画像の背景らしい領域として利用
-
-    startTime = time.time()
-
-    # 輪郭抽出は時間がかかりそうなので画像を縮小
-    microHeight = int(img2.shape[0]*microWidth/img2.shape[1])
-    img2_small = cv2.resize(img2, (microWidth,microHeight))
-
-    kernel = np.ones((3,3),np.uint8)    # 収縮用のカーネル
-    kernel2 = np.ones((1,1),np.uint8)    # 収縮用のカーネル
-    img_gray = cv2.cvtColor(img2_small,cv2.COLOR_RGB2GRAY)
-    ret, img_bin = cv2.threshold(img_gray,2,255,cv2.THRESH_BINARY)
-
-    # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
-    img_bin = cv2.erode(img_bin, kernel, iterations=3)
-    img_bin = cv2.dilate(img_bin, kernel, iterations=4)
-    # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
-    # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
+        # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
+        filePath = f"./outputImages/{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
+        try:
+            with open(filePath, mode='x') as f:
+                print("make file : " + filePath)
+        except:
+            print(filePath + " is already done!")
+            videoTime+=1
+            continue
 
 
-    # print("before tracking : " + str(time.time() - startTime))
+        img = cv2.resize(img, (smallWidth,smallHeight))
+        img_raw = img.copy()
+        img2 = img.copy()
 
-    # 輪郭追跡とコーナーの単純化
-    img_contour, importantCorners = trackContour(img_bin)
-    importantCorners = cornerReduction(importantCorners)
-    # print("\r\nlength:"+str(len(importantCorners)))
-    # print("importantCorners:"+str(importantCorners))
+        mask = mask*0
+        newmask2 = np.zeros(img.shape[:2],np.uint8) # マウスでマスク画像を描いていく
+        newmask2 = newmask2+128
 
-    # print("after tracking : " + str(time.time() - startTime))
+        # grabCut用の初期化
+        draw_line.flag = False
+        draw_line.befx = 0
+        draw_line.befy = 0
 
-    rateX = smallWidth/img_contour.shape[1]  # microWidht/Heightを、元のsmallWidth/Heightのサイズに直す比を事前に計算
-    rateY = smallHeight/img_contour.shape[0]
-    for index in range(len(importantCorners)): # 輪郭の描画
-        x1 = importantCorners[index][0] # 今見ている点
-        y1 = importantCorners[index][1] # 今見ている点
-        x2 = importantCorners[(index+1)%len(importantCorners)][0] # 次の点
-        y2 = importantCorners[(index+1)%len(importantCorners)][1] # 次の点
+        # ↓ 処理開始 ↓
+        #真ん中の方のみを抽出
+        # rect = (int(smallWidth/10), int(smallHeight/10), int(smallWidth*8/10), int(smallHeight*8/10))
+        rect = (1, 1, smallWidth-2, smallHeight-2)
+        cv2.grabCut(img,mask,rect,bgdModel,fgdModel,3,cv2.GC_INIT_WITH_RECT)
 
-        img_contour[y1][x1] = 200
+        mask2 = np.where((mask==2)|(mask==0),2,3).astype('uint8')
+        mask3 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
 
-        # print(int(x1*rateX),int(y1*rateY))
-        cv2.line(img_raw,(int(x1*rateX),int(y1*rateY)), (int(x2*rateX),int(y2*rateY)), (255,0,0),2)
-        cv2.circle(img_raw,(int(x1*rateX),int(y1*rateY)),2,(0,0,255),-1)
+        temp = mask.copy()
+        mask[previousMask == 2] = 2
+        # cv2.imshow("prev", previousMask*50)
 
-
-    img2_small[img_contour == 129] = (255,0,0)
-    img2_small[img_contour == 200] = (0,255,0)
-    img2_small[img_contour == 255] = (0,0,255)
-
-    img2_temp = cv2.resize(img2_small, (smallWidth,smallHeight))
-
-    # 出力結果の確認
-    cv2.imshow('img_bin',img_bin)
-    cv2.imshow('img_contour',img_contour)
-    cv2.imshow('img_raw',img_raw)
-    # key = cv2.waitKey(10)
-    # cv2.destroyAllWindows()
+        cv2.namedWindow('img_temp')
+        cv2.setMouseCallback('img_temp',draw_line)
 
 
+        img2 = grabWithImg(mask2, False)
+        img_temp = img2.copy() # 自由に位置を指定できるやつ用のimg
+        img_temp_rotated = img2.copy() # 自由に位置を指定できるやつ用のimg
 
-    outputResults(str(videoTime),img_raw,img,filePath,labelName,importantCorners,rateX,rateY,smallWidth,smallHeight)
-    # ファイル出力たち
+        while(1):
+            # mask[(mask == 2)] = 127
+            # mask[(mask == 3)] = 200
+            # mask[mask == 1] = 255
+            cv2.imshow("mask", mask*85)
+            # mask[mask == 255] = 1 # いらない気がする
 
-
-
-
-    # 学習精度向上を目指し、データ拡張を行う
-    # for count in range(2):
-    max_index = max([int(re.search(r'\((.*)\)', str(path)).group(1)) for path in pathlib.Path('./background/').glob('*.jpg')])
-
-    for count in range(10):
-        size = random.uniform(0.6,1.2)
-        degree = random.uniform(-30,30)
-        backImgNum = int(random.uniform(1,max_index))
-        centerX = random.random()
-        centerY = random.random()
-
-        randomMat = cv2.getRotationMatrix2D((int(smallWidth*centerX), int(smallHeight*centerY)), degree, size)
-        print('./background/1 ('+str(backImgNum)+').jpg')
-        print(randomMat)
-
-        affine_img = cv2.warpAffine(img_temp, randomMat, (smallWidth,smallHeight))
-        # cv2.imshow('affine_img',affine_img)
-
-        backImg = cv2.imread('./background/1 ('+str(backImgNum)+').jpg') 
-        backH = int(backImg.shape[1]*backImg.shape[0] / smallWidth) # 背景画像のHeight
-        backImg = cv2.resize(backImg, (smallWidth,backH)) 
+            cv2.imshow('raw',img_raw)
+            cv2.imshow('newmask2',newmask2)
+            cv2.imshow('img_temp',img_temp)
 
 
-        # ランダムに上下左右に対象物の位置を移動させる
-        addX = int(random.uniform(-smallWidth/4,smallWidth/2)) 
-        addY = int(random.uniform(0,backImg.shape[0]*2/3))
+            key = cv2.waitKey(20)
+            if key == 119:  # "w"キーを入力で、前景（白）をimg_temp windowに描画できるように
+                print("white")
+                color = (255,255,255)
+            elif key == 98:  # "b"
+                print("black")
+                color = (0,0,0)
+            elif key == 103:  # "g"キーを入力で、grabCutを実行
+                img2 = grabWithImg(mask2, False)
+                img_temp = img2.copy() # 自由に位置を指定できるやつ用のimg
+            elif key == 27:  # "ESC"キーを入力で、前景と背景のおおよその分離を終了
+                img2 = grabWithImg(mask2, True)
+                break
+            elif key == 113:  # "q"キーを入力で、プログラムを途中終了
+                exit()
 
-        # コントローラを重畳する
-        for y in range(smallHeight):
-            if affine_img.shape[0] <= y:
-                continue
+        # cv2.destroyAllWindows()
+        previousMask = mask  # 1つ過去のマスク画像を、次のマスク画像の背景らしい領域として利用
 
-            for x in range(smallWidth):
-                if affine_img.shape[1] <= x:
-                    continue
-    
-                # backImgに合わせるときにxがはみ出ないか
-                if backImg.shape[1] <= addX+x or addX+x < 0 :
-                    continue
-                elif backImg.shape[0] <= addY+y or addY+y < 0 : # backImgに合わせるときにxがはみ出ないか
-                    continue
+        startTime = time.time()
 
-                # print(x,y,addX,addY)
-                if affine_img[y][x][0] != 0: # TODO:out of rangeの発生を防ぐ
-                    backImg[addY+y][addX+x] = affine_img[y][x]
+        # 輪郭抽出は時間がかかりそうなので画像を縮小
+        microHeight = int(img2.shape[0]*microWidth/img2.shape[1])
+        img2_small = cv2.resize(img2, (microWidth,microHeight))
 
-        visualizedImg = backImg.copy()
-        expandCorners = []
+        kernel = np.ones((3,3),np.uint8)    # 収縮用のカーネル
+        kernel2 = np.ones((1,1),np.uint8)    # 収縮用のカーネル
+        img_gray = cv2.cvtColor(img2_small,cv2.COLOR_RGB2GRAY)
+        ret, img_bin = cv2.threshold(img_gray,2,255,cv2.THRESH_BINARY)
 
+        # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
+        img_bin = cv2.erode(img_bin, kernel, iterations=3)
+        img_bin = cv2.dilate(img_bin, kernel, iterations=4)
+        # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
+        # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
+
+
+        # print("before tracking : " + str(time.time() - startTime))
+
+        # 輪郭追跡とコーナーの単純化
+        img_contour, importantCorners = trackContour(img_bin)
+        importantCorners = cornerReduction(importantCorners)
+        # print("\r\nlength:"+str(len(importantCorners)))
+        # print("importantCorners:"+str(importantCorners))
+
+        # print("after tracking : " + str(time.time() - startTime))
+
+        rateX = smallWidth/img_contour.shape[1]  # microWidht/Heightを、元のsmallWidth/Heightのサイズに直す比を事前に計算
+        rateY = smallHeight/img_contour.shape[0]
         for index in range(len(importantCorners)): # 輪郭の描画
             x1 = importantCorners[index][0] # 今見ている点
             y1 = importantCorners[index][1] # 今見ている点
             x2 = importantCorners[(index+1)%len(importantCorners)][0] # 次の点
             y2 = importantCorners[(index+1)%len(importantCorners)][1] # 次の点
 
-            # アフィン変換後の座標
-            x1_ = x1 * randomMat[0][0] + y1 * randomMat[0][1] + randomMat[0][2] + addX 
-            y1_ = x1 * randomMat[1][0] + y1 * randomMat[1][1] + randomMat[1][2] + addY
-            x2_ = x2 * randomMat[0][0] + y2 * randomMat[0][1] + randomMat[0][2] + addX
-            y2_ = x2 * randomMat[1][0] + y2 * randomMat[1][1] + randomMat[1][2] + addY
+            img_contour[y1][x1] = 200
 
-            # アフィン変換後に画面外な輪郭を無視
-            if affine_img.shape[1] <= x1_ - addX:
-                x1_ = affine_img.shape[1] + addX
-            elif x1_ - addX < 0:
-                x1_ = addX
-            elif affine_img.shape[0] <= y1_ - addY:
-                y1_ = affine_img.shape[0] + addY
-            elif y1_ - addY < 0:
-                y1_ = addY
-    
-            # 背景画像外にある輪郭を無視
-            if backImg.shape[1] <= x1_:
-                x1_ = backImg.shape[1]
-            elif x1_ - addX < 0:
-                x1_ = 0
-            elif backImg.shape[0] <= y1_:
-                y1_ = backImg.shape[0]
-            elif y1_ < 0:
-                y1_ = 0
-            if backImg.shape[1] <= x2_:
-                x2_ = backImg.shape[1]
-            elif x2_ < 0:
-                x2_ = 0
-            elif backImg.shape[0] <= y2_:
-                y2_ = backImg.shape[0]
-            elif y2_ < 0:
-                y2_ = 0
-
-            expandCorners.append([x1_,y1_])
-
-            # 輪郭の視覚化
-            cv2.line(visualizedImg,(int(x1_*rateX),int(y1_*rateY)), (int(x2_*rateX),int(y2_*rateY)), (255,0,0),2)
-            cv2.circle(visualizedImg,(int(x1_*rateX),int(y1_*rateY)),2,(0,0,255),-1)
-
-        filePath = "./outputImages/" + str(videoTime) + "-" + str(count) + ".json"
-
-        if len(expandCorners) <=0:
-            continue
-        outputResults(str(videoTime)+"-"+str(count),visualizedImg,backImg,filePath,labelName,expandCorners,1,1,backImg.shape[1],backImg.shape[0])
+            # print(int(x1*rateX),int(y1*rateY))
+            cv2.line(img_raw,(int(x1*rateX),int(y1*rateY)), (int(x2*rateX),int(y2*rateY)), (255,0,0),2)
+            cv2.circle(img_raw,(int(x1*rateX),int(y1*rateY)),2,(0,0,255),-1)
 
 
-    cv2.imshow('back_img',backImg)
-    # key = cv2.waitKey()
+        img2_small[img_contour == 129] = (255,0,0)
+        img2_small[img_contour == 200] = (0,255,0)
+        img2_small[img_contour == 255] = (0,0,255)
+
+        img2_temp = cv2.resize(img2_small, (smallWidth,smallHeight))
+
+        # 出力結果の確認
+        cv2.imshow('img_bin',img_bin)
+        cv2.imshow('img_contour',img_contour)
+        cv2.imshow('img_raw',img_raw)
+        # key = cv2.waitKey(10)
+        # cv2.destroyAllWindows()
 
 
 
-    print("imwrite time : " + str(time.time() - startTime))
+        outputResults(f"{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}",img_raw,img,filePath,labelName,importantCorners,rateX,rateY,smallWidth,smallHeight)
+        # ファイル出力たち
 
 
-    videoTime += 1
 
-cv2.waitKey()
+
+        # 学習精度向上を目指し、データ拡張を行う
+        # for count in range(2):
+        max_index = max([int(re.search(r'\((.*)\)', str(path)).group(1)) for path in pathlib.Path('./background/').glob('*.jpg')])
+
+        for count in range(10):
+            size = random.uniform(0.6,1.2)
+            degree = random.uniform(-30,30)
+            backImgNum = int(random.uniform(1,max_index))
+            centerX = random.random()
+            centerY = random.random()
+
+            randomMat = cv2.getRotationMatrix2D((int(smallWidth*centerX), int(smallHeight*centerY)), degree, size)
+            print('./background/1 ('+str(backImgNum)+').jpg')
+            print(randomMat)
+
+            affine_img = cv2.warpAffine(img_temp, randomMat, (smallWidth,smallHeight))
+            # cv2.imshow('affine_img',affine_img)
+
+            backImg = cv2.imread('./background/1 ('+str(backImgNum)+').jpg') 
+            backH = int(backImg.shape[1]*backImg.shape[0] / smallWidth) # 背景画像のHeight
+            backImg = cv2.resize(backImg, (smallWidth,backH)) 
+
+
+            # ランダムに上下左右に対象物の位置を移動させる
+            addX = int(random.uniform(-smallWidth/4,smallWidth/2)) 
+            addY = int(random.uniform(0,backImg.shape[0]*2/3))
+
+            # コントローラを重畳する
+            for y in range(smallHeight):
+                if affine_img.shape[0] <= y:
+                    continue
+
+                for x in range(smallWidth):
+                    if affine_img.shape[1] <= x:
+                        continue
+        
+                    # backImgに合わせるときにxがはみ出ないか
+                    if backImg.shape[1] <= addX+x or addX+x < 0 :
+                        continue
+                    elif backImg.shape[0] <= addY+y or addY+y < 0 : # backImgに合わせるときにxがはみ出ないか
+                        continue
+
+                    # print(x,y,addX,addY)
+                    if affine_img[y][x][0] != 0: # TODO:out of rangeの発生を防ぐ
+                        backImg[addY+y][addX+x] = affine_img[y][x]
+
+            visualizedImg = backImg.copy()
+            expandCorners = []
+
+            for index in range(len(importantCorners)): # 輪郭の描画
+                x1 = importantCorners[index][0] # 今見ている点
+                y1 = importantCorners[index][1] # 今見ている点
+                x2 = importantCorners[(index+1)%len(importantCorners)][0] # 次の点
+                y2 = importantCorners[(index+1)%len(importantCorners)][1] # 次の点
+
+                # アフィン変換後の座標
+                x1_ = x1 * randomMat[0][0] + y1 * randomMat[0][1] + randomMat[0][2] + addX 
+                y1_ = x1 * randomMat[1][0] + y1 * randomMat[1][1] + randomMat[1][2] + addY
+                x2_ = x2 * randomMat[0][0] + y2 * randomMat[0][1] + randomMat[0][2] + addX
+                y2_ = x2 * randomMat[1][0] + y2 * randomMat[1][1] + randomMat[1][2] + addY
+
+                # アフィン変換後に画面外な輪郭を無視
+                if affine_img.shape[1] <= x1_ - addX:
+                    x1_ = affine_img.shape[1] + addX
+                elif x1_ - addX < 0:
+                    x1_ = addX
+                elif affine_img.shape[0] <= y1_ - addY:
+                    y1_ = affine_img.shape[0] + addY
+                elif y1_ - addY < 0:
+                    y1_ = addY
+        
+                # 背景画像外にある輪郭を無視
+                if backImg.shape[1] <= x1_:
+                    x1_ = backImg.shape[1]
+                elif x1_ - addX < 0:
+                    x1_ = 0
+                elif backImg.shape[0] <= y1_:
+                    y1_ = backImg.shape[0]
+                elif y1_ < 0:
+                    y1_ = 0
+                if backImg.shape[1] <= x2_:
+                    x2_ = backImg.shape[1]
+                elif x2_ < 0:
+                    x2_ = 0
+                elif backImg.shape[0] <= y2_:
+                    y2_ = backImg.shape[0]
+                elif y2_ < 0:
+                    y2_ = 0
+
+                expandCorners.append([x1_,y1_])
+
+                # 輪郭の視覚化
+                cv2.line(visualizedImg,(int(x1_*rateX),int(y1_*rateY)), (int(x2_*rateX),int(y2_*rateY)), (255,0,0),2)
+                cv2.circle(visualizedImg,(int(x1_*rateX),int(y1_*rateY)),2,(0,0,255),-1)
+
+            filePath = f"./outputImages/{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
+
+            if len(expandCorners) <=0:
+                continue
+            outputResults(f"{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}",visualizedImg,backImg,filePath,labelName,expandCorners,1,1,backImg.shape[1],backImg.shape[0])
+
+
+        cv2.imshow('back_img',backImg)
+        # key = cv2.waitKey()
+
+
+
+        print("imwrite time : " + str(time.time() - startTime))
+
+
+        videoTime += 1
+
+    cv2.waitKey()
