@@ -224,9 +224,9 @@ indices = [int(str(p).split('_')[0])
            for p in pathlib.Path(output_path).glob('*')]
 background_files = pathlib.Path('./background').glob('*')
 if indices:
-    index = np.max(indices)
+    prefix = np.max(indices) + 1
 else:
-    index = 0
+    prefix = 0
 
 for j, video_file in enumerate(video_files):
     video = cv2.VideoCapture(str(video_file))
@@ -268,7 +268,7 @@ for j, video_file in enumerate(video_files):
             break
 
         # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-        filePath = f"./{output_path}/{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
+        filePath = f"./{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
         try:
             with open(filePath, mode='x') as f:
                 print("make file : " + filePath)
@@ -398,7 +398,7 @@ for j, video_file in enumerate(video_files):
         # key = cv2.waitKey(10)
         # cv2.destroyAllWindows()
 
-        outputResults(output_path, f"{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}", img_raw, img,
+        outputResults(output_path, f"{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}", img_raw, img,
                       filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
         # ファイル出力たち
 
@@ -507,11 +507,11 @@ for j, video_file in enumerate(video_files):
                 cv2.circle(visualizedImg, (int(x1_ * rateX),
                            int(y1_ * rateY)), 2, (0, 0, 255), -1)
 
-            filePath = f"./{output_path}/{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
+            filePath = f"./{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
 
             if len(expandCorners) <= 0:
                 continue
-            outputResults(output_path, f"{str(index).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}", visualizedImg,
+            outputResults(output_path, f"{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}", visualizedImg,
                           backImg, filePath, labelName, expandCorners, 1, 1, backImg.shape[1], backImg.shape[0])
 
         cv2.imshow('back_img', backImg)
