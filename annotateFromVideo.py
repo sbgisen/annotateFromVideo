@@ -311,6 +311,7 @@ for j, video_file in enumerate(video_files):
         img_temp = img2.copy()  # 自由に位置を指定できるやつ用のimg
         img_temp_rotated = img2.copy()  # 自由に位置を指定できるやつ用のimg
 
+        next_video = False
         while(1):
             # mask[(mask == 2)] = 127
             # mask[(mask == 3)] = 200
@@ -336,8 +337,11 @@ for j, video_file in enumerate(video_files):
                 img2 = grabWithImg(mask2, True)
                 break
             elif key == 113:  # "q"キーを入力で、プログラムを途中終了
-                exit()
+                next_video = True
+                break
 
+        if next_video:
+            break
         # cv2.destroyAllWindows()
         previousMask = mask  # 1つ過去のマスク画像を、次のマスク画像の背景らしい領域として利用
 
@@ -521,4 +525,4 @@ for j, video_file in enumerate(video_files):
 
         videoTime += 1
 
-    cv2.waitKey()
+    # cv2.waitKey()
