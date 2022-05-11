@@ -1,7 +1,6 @@
 import base64
 import pathlib
 import random
-import re
 import sys
 import time
 
@@ -223,6 +222,7 @@ video_dir = pathlib.Path('./videos')
 video_files = [p for p in video_dir.glob('**/*') if p.is_file()]
 indices = [int(str(p).split('_')[0])
            for p in pathlib.Path(output_path).glob('*')]
+background_files = pathlib.Path('./background').glob('*')
 if indices:
     index = np.max(indices)
 else:
@@ -404,26 +404,24 @@ for j, video_file in enumerate(video_files):
 
         # 学習精度向上を目指し、データ拡張を行う
         # for count in range(2):
-        max_index = max([int(re.search(r'\((.*)\)', str(path)).group(1))
-                        for path in pathlib.Path('./background/').glob('*.jpg')])
 
         for count in range(10):
             size = random.uniform(0.6, 1.2)
             degree = random.uniform(-30, 30)
-            backImgNum = int(random.uniform(1, max_index))
+            backImgNum = int(random.uniform(0, len(background_files) - 1))
             centerX = random.random()
             centerY = random.random()
 
             randomMat = cv2.getRotationMatrix2D(
                 (int(smallWidth * centerX), int(smallHeight * centerY)), degree, size)
-            print('./background/1 (' + str(backImgNum) + ').jpg')
+            print(str(background_files[backImgNum]))
             print(randomMat)
 
             affine_img = cv2.warpAffine(
                 img_temp, randomMat, (smallWidth, smallHeight))
             # cv2.imshow('affine_img',affine_img)
 
-            backImg = cv2.imread('./background/1 (' + str(backImgNum) + ').jpg')
+            backImg = cv2.imread(str(background_files[backImgNum]))
             # 背景画像のHeight
             backH = int(backImg.shape[1] * backImg.shape[0] / smallWidth)
             backImg = cv2.resize(backImg, (smallWidth, backH))
