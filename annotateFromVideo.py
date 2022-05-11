@@ -170,10 +170,10 @@ def outputResults(
         smallWidth,
         smallHeight):
     cv2.imwrite("./contourResults/" + videoTime + ".jpg", img_raw)
-    cv2.imwrite(f"./{output_path}/" + videoTime + ".jpg", img)
+    cv2.imwrite(f"{output_path}/" + videoTime + ".jpg", img)
 
     # Base64で画像を文字列化したものをjsonファイルに含める必要あり
-    with open(f"./{output_path}/" + videoTime + ".jpg", "rb") as f:
+    with open(f"{output_path}/" + videoTime + ".jpg", "rb") as f:
         img_base64 = base64.b64encode(f.read())
 
     with open(filePath, mode='w') as f:  # 衝撃的なほどjson系のライブラリを使えばよかった。。。
@@ -202,7 +202,7 @@ def outputResults(
         f.write("\t],\n")
         f.write("\t\"lineColor\": [0,255,0,128],\n")
         f.write("\t\"fillColor\": [255,0,0,128],\n")
-        f.write("\t\"imagePath\": \"{}/".format(pathlib.Path(output_path).name) + videoTime + ".jpg\",\n")
+        f.write("\t\"imagePath\": \"{}/".format(output_path.name) + videoTime + ".jpg\",\n")
         f.write("\t\"imageData\": \"" + (img_base64).decode() + "\",\n")  # 最初に 「b'」 という文字が入らないようにdecode
         f.write("\t\"imageHeight\": " + str(smallHeight) + ",\n")
         f.write("\t\"imageWidth\": " + str(smallWidth) + "\n")
@@ -211,7 +211,7 @@ def outputResults(
 
 print("run!")
 args = sys.argv
-output_path = args[1]
+output_path = pathlib.Path(args[1])
 
 smallWidth = 550  # 前景背景抽出時の画像横のサイズ
 microWidth = 550  # 輪郭抽出時の処理が多少重たいのでそのときの画像サイズをここで調節(横サイズ)
@@ -221,7 +221,7 @@ microWidth = 550  # 輪郭抽出時の処理が多少重たいのでそのとき
 video_dir = pathlib.Path('./videos')
 video_files = [p for p in video_dir.glob('**/*') if p.is_file() and p.name != '.gitkeep']
 indices = [int(str(p.name).split('_')[0])
-           for p in pathlib.Path(output_path).glob('*')]
+           for p in output_path.glob('*')]
 background_files = [p for p in pathlib.Path('./background').glob('*') if p.is_file() and p.name != '.gitkeep']
 if indices:
     prefix = np.max(indices) + 1
@@ -268,7 +268,7 @@ for j, video_file in enumerate(video_files):
             break
 
         # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-        filePath = f"./{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
+        filePath = f"{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
         try:
             with open(filePath, mode='x') as f:
                 print("make file : " + filePath)
@@ -511,7 +511,7 @@ for j, video_file in enumerate(video_files):
                 cv2.circle(visualizedImg, (int(x1_ * rateX),
                            int(y1_ * rateY)), 2, (0, 0, 255), -1)
 
-            filePath = f"./{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
+            filePath = f"{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
 
             if len(expandCorners) <= 0:
                 continue
