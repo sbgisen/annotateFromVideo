@@ -220,13 +220,7 @@ microWidth = 550  # 輪郭抽出時の処理が多少重たいのでそのとき
 # 処理する動画を読み込み、処理に必要な複製等を用意
 video_dir = pathlib.Path('./videos')
 video_files = [p for p in video_dir.glob('**/*') if p.is_file() and p.name != '.gitkeep']
-indices = [int(str(p.name).split('_')[0])
-           for p in output_path.glob('*')]
 background_files = [p for p in pathlib.Path('./background').glob('*') if p.is_file() and p.name != '.gitkeep']
-if indices:
-    prefix = np.max(indices) + 1
-else:
-    prefix = 0
 
 for j, video_file in enumerate(video_files):
     video = cv2.VideoCapture(str(video_file))
@@ -268,7 +262,7 @@ for j, video_file in enumerate(video_files):
             break
 
         # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-        filePath = f"{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}.json"
+        filePath = f"{output_path}/{labelName}_{video_file}_{videoTime}.json"
         try:
             with open(filePath, mode='x') as f:
                 print("make file : " + filePath)
@@ -402,7 +396,7 @@ for j, video_file in enumerate(video_files):
         # key = cv2.waitKey(10)
         # cv2.destroyAllWindows()
 
-        outputResults(output_path, f"{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}", img_raw, img,
+        outputResults(output_path, f"{labelName}_{video_file}_{videoTime}", img_raw, img,
                       filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
         # ファイル出力たち
 
@@ -511,11 +505,11 @@ for j, video_file in enumerate(video_files):
                 cv2.circle(visualizedImg, (int(x1_ * rateX),
                            int(y1_ * rateY)), 2, (0, 0, 255), -1)
 
-            filePath = f"{output_path}/{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}.json"
+            filePath = f"{output_path}/{labelName}_{video_file}_{videoTime}_{count}.json"
 
             if len(expandCorners) <= 0:
                 continue
-            outputResults(output_path, f"{str(prefix).zfill(8)}_{str(j).zfill(8)}_{videoTime}-{count}", visualizedImg,
+            outputResults(output_path, f"{labelName}_{video_file}_{videoTime}_{count}", visualizedImg,
                           backImg, filePath, labelName, expandCorners, 1, 1, backImg.shape[1], backImg.shape[0])
 
         cv2.imshow('back_img', backImg)
