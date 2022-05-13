@@ -1,4 +1,5 @@
 import base64
+import os
 import pathlib
 import random
 import sys
@@ -224,6 +225,7 @@ background_files = [p for p in pathlib.Path('./background').glob('*') if p.is_fi
 
 for j, video_file in enumerate(video_files):
     video = cv2.VideoCapture(str(video_file))
+    videoName = os.path.basename(video_file).split('.')[0]
     labelName = video_file.parent.name
     # ex) labelName = "controller"
 
@@ -262,7 +264,7 @@ for j, video_file in enumerate(video_files):
             break
 
         # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-        filePath = f"{output_path}/{labelName}_{video_file}_{videoTime}.json"
+        filePath = f"{output_path}/{labelName}_{videoName}_{videoTime}.json"
         try:
             with open(filePath, mode='x') as f:
                 print("make file : " + filePath)
@@ -396,7 +398,7 @@ for j, video_file in enumerate(video_files):
         # key = cv2.waitKey(10)
         # cv2.destroyAllWindows()
 
-        outputResults(output_path, f"{labelName}_{video_file}_{videoTime}", img_raw, img,
+        outputResults(output_path, f"{labelName}_{videoName}_{videoTime}", img_raw, img,
                       filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
         # ファイル出力たち
 
@@ -505,11 +507,11 @@ for j, video_file in enumerate(video_files):
                 cv2.circle(visualizedImg, (int(x1_ * rateX),
                            int(y1_ * rateY)), 2, (0, 0, 255), -1)
 
-            filePath = f"{output_path}/{labelName}_{video_file}_{videoTime}_{count}.json"
+            filePath = f"{output_path}/{labelName}_{videoName}_{videoTime}_{count}.json"
 
             if len(expandCorners) <= 0:
                 continue
-            outputResults(output_path, f"{labelName}_{video_file}_{videoTime}_{count}", visualizedImg,
+            outputResults(output_path, f"{labelName}_{videoName}_{videoTime}_{count}", visualizedImg,
                           backImg, filePath, labelName, expandCorners, 1, 1, backImg.shape[1], backImg.shape[0])
 
         cv2.imshow('back_img', backImg)
