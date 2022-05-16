@@ -348,13 +348,16 @@ for j, video_file in enumerate(video_files):
         kernel = np.ones((3, 3), np.uint8)    # 収縮用のカーネル
         kernel2 = np.ones((1, 1), np.uint8)    # 収縮用のカーネル
         img_gray = cv2.cvtColor(img2_small, cv2.COLOR_RGB2GRAY)
-        ret, img_bin = cv2.threshold(img_gray, 2, 255, cv2.THRESH_BINARY)
+        ret, img_bin = cv2.threshold(img_gray, 10, 255, cv2.THRESH_BINARY)
 
         # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
         img_bin = cv2.erode(img_bin, kernel, iterations=3)
-        img_bin = cv2.dilate(img_bin, kernel, iterations=4)
+        # img_bin = cv2.dilate(img_bin, kernel, iterations=4)
         # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
         # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
+        mask = img_bin.copy()
+        mask[mask == 255] = 1
+        img2_small = img2_small * mask[:, :, np.newaxis]
 
         # print("before tracking : " + str(time.time() - startTime))
 
@@ -383,9 +386,9 @@ for j, video_file in enumerate(video_files):
             cv2.circle(img_raw, (int(x1 * rateX), int(y1 * rateY)),
                        2, (0, 0, 255), -1)
 
-        img2_small[img_contour == 129] = (255, 0, 0)
-        img2_small[img_contour == 200] = (0, 255, 0)
-        img2_small[img_contour == 255] = (0, 0, 255)
+        # img2_small[img_contour == 129] = (255, 0, 0)
+        # img2_small[img_contour == 200] = (0, 255, 0)
+        # img2_small[img_contour == 255] = (0, 0, 255)
 
         img2_temp = cv2.resize(img2_small, (smallWidth, smallHeight))
 
@@ -416,7 +419,7 @@ for j, video_file in enumerate(video_files):
             print(randomMat)
 
             affine_img = cv2.warpAffine(
-                img_temp, randomMat, (smallWidth, smallHeight))
+                img2_temp, randomMat, (smallWidth, smallHeight))
             # cv2.imshow('affine_img',affine_img)
 
             backImg = cv2.imread(str(background_files[backImgNum]))
