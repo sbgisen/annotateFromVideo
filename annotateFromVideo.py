@@ -351,13 +351,12 @@ for j, video_file in enumerate(video_files):
         ret, img_bin = cv2.threshold(img_gray, 10, 255, cv2.THRESH_BINARY)
 
         # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
-        img_bin = cv2.erode(img_bin, kernel, iterations=3)
+        img_bin = cv2.erode(img_bin, kernel, iterations=1)
         # img_bin = cv2.dilate(img_bin, kernel, iterations=4)
         # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
         # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
-        mask = img_bin.copy()
-        mask[mask == 255] = 1
-        img2_small = img2_small * mask[:, :, np.newaxis]
+        mask_bin = np.where((img_bin == 0), 0, 1).astype('uint8')
+        img2_small = img2_small * mask_bin[:, :, np.newaxis]
 
         # print("before tracking : " + str(time.time() - startTime))
 
@@ -420,6 +419,8 @@ for j, video_file in enumerate(video_files):
 
             affine_img = cv2.warpAffine(
                 img2_temp, randomMat, (smallWidth, smallHeight))
+            _, affine_bin = cv2.threshold(affine_img, 10, 1, cv2.THRESH_BINARY)
+            affine_img = affine_img * affine_bin[:, :]
             # cv2.imshow('affine_img',affine_img)
 
             backImg = cv2.imread(str(background_files[backImgNum]))
