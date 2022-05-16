@@ -424,7 +424,7 @@ for j, video_file in enumerate(video_files):
 
             backImg = cv2.imread(str(background_files[backImgNum]))
             # 背景画像のHeight
-            backH = int(backImg.shape[1] * backImg.shape[0] / smallWidth)
+            backH = int(backImg.shape[0] * smallWidth / backImg.shape[1])
             backImg = cv2.resize(backImg, (smallWidth, backH))
 
             # ランダムに上下左右に対象物の位置を移動させる
