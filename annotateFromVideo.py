@@ -351,7 +351,7 @@ for j, video_file in enumerate(video_files):
         ret, img_bin = cv2.threshold(img_gray, 10, 255, cv2.THRESH_BINARY)
 
         # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
-        img_bin = cv2.erode(img_bin, kernel, iterations=1)
+        img_bin = cv2.erode(img_bin, kernel, iterations=3)
         # img_bin = cv2.dilate(img_bin, kernel, iterations=4)
         # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
         # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
@@ -371,6 +371,7 @@ for j, video_file in enumerate(video_files):
         # microWidht/Heightを、元のsmallWidth/Heightのサイズに直す比を事前に計算
         rateX = smallWidth / img_contour.shape[1]
         rateY = smallHeight / img_contour.shape[0]
+        resized_points = []
         for index in range(len(importantCorners)):  # 輪郭の描画
             x1 = importantCorners[index][0]  # 今見ている点
             y1 = importantCorners[index][1]  # 今見ている点
@@ -384,12 +385,16 @@ for j, video_file in enumerate(video_files):
                      (int(x2 * rateX), int(y2 * rateY)), (255, 0, 0), 2)
             cv2.circle(img_raw, (int(x1 * rateX), int(y1 * rateY)),
                        2, (0, 0, 255), -1)
+            resized_points.append([int(x1 * rateX), int(y1 * rateY)])
+
+        img2_mask = np.zeros((smallHeight, smallWidth, 3), np.uint8)
+        img2_mask = cv2.fillPoly(img2_mask, [np.array(resized_points)], (255, 255, 255))
 
         # img2_small[img_contour == 129] = (255, 0, 0)
         # img2_small[img_contour == 200] = (0, 255, 0)
         # img2_small[img_contour == 255] = (0, 0, 255)
 
-        img2_temp = cv2.resize(img2_small, (smallWidth, smallHeight))
+        # img2_temp = cv2.resize(img2_small, (smallWidth, smallHeight))
 
         # 出力結果の確認
         cv2.imshow('img_bin', img_bin)
@@ -418,10 +423,14 @@ for j, video_file in enumerate(video_files):
             print(randomMat)
 
             affine_img = cv2.warpAffine(
-                img2_temp, randomMat, (smallWidth, smallHeight))
-            _, affine_bin = cv2.threshold(affine_img, 10, 1, cv2.THRESH_BINARY)
-            affine_img = affine_img * affine_bin[:, :]
-            # cv2.imshow('affine_img',affine_img)
+                img2, randomMat, (smallWidth, smallHeight))
+            affine_mask = cv2.warpAffine(
+                img2_mask, randomMat, (smallWidth, smallHeight))
+            affine_gray = cv2.cvtColor(affine_mask,cv2.COLOR_RGB2GRAY)
+            _, affine_bin = cv2.threshold(affine_gray, 10, 255, cv2.THRESH_BINARY)
+            mask_inv = cv2.bitwise_not(affine_gray)
+            _, affine_bin = cv2.threshold(affine_gray, 10, 1, cv2.THRESH_BINARY)
+            affine_img = affine_img * affine_bin[:, :,np.newaxis]
 
             backImg = cv2.imread(str(background_files[backImgNum]))
             # 背景画像のHeight
