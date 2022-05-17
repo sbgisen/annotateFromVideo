@@ -555,23 +555,21 @@ for polygon_file in polygon_files:
         backImgNum = int(random.uniform(0, len(background_files) - 1))
         backImg = cv2.imread(str(background_files[backImgNum]))
         backImg, corners = overlay_object(backImg, img, img_mask, polygon)
-        if len(corners.exterior.coords.xy[0]) == 0:
-            continue
-        object_corners[polygon_file.parent.name] = corners
+        if len(corners.exterior.coords.xy[0]) != 0:
+            object_corners[polygon_file.parent.name] = corners
         add_object_num = int(random.uniform(0, len(objects)))
         chosen = np.random.choice([o for o in objects if o not in object_corners.keys()], add_object_num)
         for c in chosen:
             add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
-            polygon = np.load(add_polygon_file)
+            add_polygon = np.load(add_polygon_file)
             add_base_name = str(add_polygon_file).rsplit('_', 1)[0]
-            img = cv2.imread(add_base_name + '.jpg')
-            img_mask = cv2.imread(add_base_name + '_mask.jpg')
-            backImg, corners = overlay_object(backImg, img, img_mask, polygon)
+            add_img = cv2.imread(add_base_name + '.jpg')
+            add_img_mask = cv2.imread(add_base_name + '_mask.jpg')
+            backImg, corners = overlay_object(backImg, add_img, add_img_mask, add_polygon)
             for key in object_corners.keys():
                 object_corners[key] = object_corners[key].difference(corners)
-            if len(corners.exterior.coords.xy[0]) == 0:
-                continue
-            object_corners[add_polygon_file.parent.name] = corners
+            if len(corners.exterior.coords.xy[0]) != 0:
+                object_corners[add_polygon_file.parent.name] = corners
 
         if len(object_corners.keys()) == 0:
             continue
