@@ -577,7 +577,5 @@ for polygon_file in polygon_files:
             if len(corners.exterior.coords.xy[0]) != 0:
                 object_corners[add_polygon_file.parent.name] = corners
 
-        if len(object_corners.keys()) == 0:
-            continue
         outputResults(output_path, f"{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}",
                       backImg, filePath, object_corners, 1, 1, backImg.shape[1], backImg.shape[0])
