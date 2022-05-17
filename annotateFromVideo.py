@@ -32,9 +32,13 @@ def grabWithImg(mask2, last):
 
     ret = img_raw * mask3[:, :, np.newaxis]
 
+    cv2.imshow("ret", ret)
     # 背景を白にする。
     ret_white_background = ret.copy()
-    ret_white_background[ret_white_background == 0] = 100
+    black = [0, 0, 0]
+    gray = [100, 100, 100]
+    # 画像中の黒色部分([0, 0, 0])をグレー([100, 100, 100])に置換
+    ret_white_background[np.where((ret_white_background == black).all(axis=2))] = gray
 
     return ret, ret_white_background
 
