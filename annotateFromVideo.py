@@ -32,7 +32,15 @@ def grabWithImg(mask2, last):
 
     ret = img_raw * mask3[:, :, np.newaxis]
 
-    return ret
+    cv2.imshow("ret", ret)
+    # 背景を白にする。
+    ret_white_background = ret.copy()
+    black = [0, 0, 0]
+    gray = [100, 100, 100]
+    # 画像中の黒色部分([0, 0, 0])をグレー([100, 100, 100])に置換
+    ret_white_background[np.where((ret_white_background == black).all(axis=2))] = gray
+
+    return ret, ret_white_background
 
 
 # mouse callback function
@@ -47,7 +55,7 @@ def draw_line(event, x, y, flags, param):
         print("Up:" + str(x) + ", " + str(y))
         draw_line.flag = False
     elif event == cv2.EVENT_MOUSEMOVE and draw_line.flag:
-        cv2.line(img_temp, (draw_line.befx, draw_line.befy), (x, y), color, 5)
+        cv2.line(img_temp_background_white, (draw_line.befx, draw_line.befy), (x, y), color, 5)
         cv2.line(newmask2, (draw_line.befx, draw_line.befy), (x, y), color, 5)
         draw_line.befx = x
         draw_line.befy = y
@@ -244,6 +252,7 @@ for j, video_file in enumerate(video_files):
     img_raw = img.copy()  # 自由に位置を指定できるやつ用のimg
     img2 = img.copy()  # 自由に位置を指定できるやつ用のimg
     temp = img.copy()  # 自由に位置を指定できるやつ用のimg
+    img_temp_background_white = img.copy()
 
     mask = np.zeros(img.shape[:2], np.uint8)
     previousMask = np.zeros(img.shape[:2], np.uint8)
@@ -274,6 +283,7 @@ for j, video_file in enumerate(video_files):
         img = cv2.resize(img, (smallWidth, smallHeight))
         img_raw = img.copy()
         img2 = img.copy()
+        img_temp_background_white = img.copy()
 
         mask = mask * 0
         newmask2 = np.zeros(img.shape[:2], np.uint8)  # マウスでマスク画像を描いていく
@@ -301,7 +311,7 @@ for j, video_file in enumerate(video_files):
         cv2.namedWindow('img_temp')
         cv2.setMouseCallback('img_temp', draw_line)
 
-        img2 = grabWithImg(mask2, False)
+        img2, img_temp_background_white = grabWithImg(mask2, False)
         img_temp = img2.copy()  # 自由に位置を指定できるやつ用のimg
         img_temp_rotated = img2.copy()  # 自由に位置を指定できるやつ用のimg
 
@@ -315,7 +325,7 @@ for j, video_file in enumerate(video_files):
 
             cv2.imshow('raw', img_raw)
             cv2.imshow('newmask2', newmask2)
-            cv2.imshow('img_temp', img_temp)
+            cv2.imshow('img_temp', img_temp_background_white)
 
             key = cv2.waitKey(20)
             if key == 119:  # "w"キーを入力で、前景（白）をimg_temp windowに描画できるように
@@ -325,10 +335,10 @@ for j, video_file in enumerate(video_files):
                 print("black")
                 color = (0, 0, 0)
             elif key == 103:  # "g"キーを入力で、grabCutを実行
-                img2 = grabWithImg(mask2, False)
+                img2, img_temp_background_white = grabWithImg(mask2, False)
                 img_temp = img2.copy()  # 自由に位置を指定できるやつ用のimg
             elif key == 27:  # "ESC"キーを入力で、前景と背景のおおよその分離を終了
-                img2 = grabWithImg(mask2, True)
+                # img2, img_temp_high_contrast = grabWithImg(mask2, True)
                 break
             elif key == 113:  # "q"キーを入力で、プログラムを途中終了
                 next_video = True
