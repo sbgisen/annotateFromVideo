@@ -523,7 +523,7 @@ for j, video_file in enumerate(video_files):
         # outputResults(output_path, f"{labelName}_{video_file.stem}_{videoTime}", img_raw, img,
         #               filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
         # ファイル出力たち
-        (object_dir / labelName).mkdir(exist_ok=True)
+        (object_dir / labelName).mkdir(parents=True, exist_ok=True)
         cv2.imwrite(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}.jpg", img2)
         cv2.imwrite(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}_mask.jpg", img2_mask)
         np.save(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}_polygon.npy", np.array(resized_points))
