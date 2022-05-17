@@ -371,7 +371,8 @@ for j, video_file in enumerate(video_files):
         # print("before tracking : " + str(time.time() - startTime))
 
         # 輪郭追跡とコーナーの単純化
-        img_contour, importantCorners = trackContour(img_bin)
+        contour_img = cv2.dilate(img_bin, kernel, iterations=1)
+        img_contour, importantCorners = trackContour(contour_img)
         importantCorners = cornerReduction(importantCorners)
         # print("\r\nlength:"+str(len(importantCorners)))
         # print("importantCorners:"+str(importantCorners))
