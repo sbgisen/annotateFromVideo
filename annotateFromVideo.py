@@ -421,21 +421,19 @@ for j, video_file in enumerate(video_files):
         # for count in range(2):
 
         for count in range(10):
-            size = random.uniform(0.6, 1.2)
+            scale = random.uniform(0.6, 1.2)
+            objectW = smallWidth
+            objectH = smallHeight
             degree = random.uniform(-30, 30)
-            backImgNum = int(random.uniform(0, len(background_files) - 1))
-            centerX = random.random()
-            centerY = random.random()
-
             randomMat = cv2.getRotationMatrix2D(
-                (int(smallWidth * centerX), int(smallHeight * centerY)), degree, size)
-            print(str(background_files[backImgNum]))
+                (int(objectW/2), int(objectH/2)), degree, scale)
             print(randomMat)
-
+            backImgNum = int(random.uniform(0, len(background_files) - 1))
+            print(str(background_files[backImgNum]))
             affine_img = cv2.warpAffine(
-                img2, randomMat, (smallWidth, smallHeight))
+                img2, randomMat, (objectW, objectH))
             affine_mask = cv2.warpAffine(
-                img2_mask, randomMat, (smallWidth, smallHeight))
+                img2_mask, randomMat, (objectW, objectH))
             affine_gray = cv2.cvtColor(affine_mask,cv2.COLOR_RGB2GRAY)
             _, affine_bin = cv2.threshold(affine_gray, 10, 255, cv2.THRESH_BINARY)
             mask_inv = cv2.bitwise_not(affine_gray)
@@ -444,31 +442,27 @@ for j, video_file in enumerate(video_files):
 
             backImg = cv2.imread(str(background_files[backImgNum]))
             # 背景画像のHeight
-            backH = int(backImg.shape[0] * smallWidth / backImg.shape[1])
-            backImg = cv2.resize(backImg, (smallWidth, backH))
+            backW = smallWidth
+            backH = int(backImg.shape[0] * backW / backImg.shape[1])
+            backImg = cv2.resize(backImg, (backW, backH))
 
             # ランダムに上下左右に対象物の位置を移動させる
-            addX = int(random.uniform(-smallWidth / 4, smallWidth / 2))
-            addY = int(random.uniform(0, backImg.shape[0] * 2 / 3))
+            backEdgeMargin = 0.1
+            addX = int( (1.0 - backEdgeMargin) * random.uniform(- backW / 2, backW / 2) )
+            addY = int( (1.0 - backEdgeMargin) * random.uniform(- backH / 2, backH / 2) )
 
             # コントローラを重畳する
-            for y in range(smallHeight):
-                if affine_img.shape[0] <= y:
-                    continue
-
-                for x in range(smallWidth):
-                    if affine_img.shape[1] <= x:
-                        continue
-
+            for y in range(affine_img.shape[0]):
+                for x in range(affine_img.shape[1]):
                     # backImgに合わせるときにxがはみ出ないか
                     if backImg.shape[1] <= addX + x or addX + x < 0:
                         continue
-                    # backImgに合わせるときにxがはみ出ないか
+                    # backImgに合わせるときにyがはみ出ないか
                     elif backImg.shape[0] <= addY + y or addY + y < 0:
                         continue
 
                     # print(x,y,addX,addY)
-                    if affine_img[y][x][0] != 0:  # TODO:out of rangeの発生を防ぐ
+                    if (affine_img[y][x][0] + affine_img[y][x][1] + affine_img[y][x][2]) != 0:  # TODO:out of rangeの発生を防ぐ
                         backImg[addY + y][addX + x] = affine_img[y][x]
 
             visualizedImg = backImg.copy()
