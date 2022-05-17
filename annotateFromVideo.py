@@ -568,7 +568,12 @@ for polygon_file in polygon_files:
             add_img_mask = cv2.imread(add_base_name + '_mask.jpg')
             backImg, corners = overlay_object(backImg, add_img, add_img_mask, add_polygon)
             for key in object_corners.keys():
-                object_corners[key] = object_corners[key].difference(corners)
+                try:
+                    object_corners[key] = object_corners[key].difference(corners)
+                except BaseException:
+                    if not object_corners[key].is_valid:
+                        object_corners[key] = object_corners[key].buffer(0).geoms[0]
+                    object_corners[key] = object_corners[key].difference(corners)
             if len(corners.exterior.coords.xy[0]) != 0:
                 object_corners[add_polygon_file.parent.name] = corners
 
