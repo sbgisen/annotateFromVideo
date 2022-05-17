@@ -210,9 +210,10 @@ def outputResults(
                 x1 = xy[0]  # 今見ている点
                 y1 = xy[1]  # 今見ている点
                 f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "],\n")
-            x1 = x[len(x) - 1]  # 今見ている点
-            y1 = y[len(y) - 1]  # 今見ている点
-            f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "]\n")
+            if x and y:
+                x1 = x[len(x) - 1]  # 今見ている点
+                y1 = y[len(y) - 1]  # 今見ている点
+                f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "]\n")
             f.write("\t\t\t],\n")
 
             f.write("\t\t\t\"shape_type\": \"polygon\",\n")
