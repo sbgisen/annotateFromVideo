@@ -448,10 +448,10 @@ for j, video_file in enumerate(video_files):
 
             # ランダムに上下左右に対象物の位置を移動させる
             # オブジェクトが画面外に出るのを防ぐためエッジ付近への配置を禁止する（オブジェクト動画が常に画面中央を通る場合は不要）
-            x_edge_margin = affine_img.shape[0]/4
-            y_edge_margin = affine_img.shape[1]/4
-            addX = int(random.uniform(x_edge_margin, backW - x_edge_margin) - affine_img.shape[0]/2)
-            addY = int(random.uniform(y_edge_margin, backH - y_edge_margin) - affine_img.shape[1]/2)
+            x_edge_margin = affine_img.shape[1]/8
+            y_edge_margin = affine_img.shape[0]/8
+            addX = int(random.uniform(x_edge_margin, backW - x_edge_margin) - affine_img.shape[1]/2)
+            addY = int(random.uniform(y_edge_margin, backH - y_edge_margin) - affine_img.shape[0]/2)
 
             # コントローラを重畳する
             for y in range(affine_img.shape[0]):
