@@ -552,13 +552,14 @@ for polygon_file in polygon_files:
         if pathlib.Path(filePath).exists():
             print(str(filePath) + " is already done!")
             continue
-        backImgNum = int(random.uniform(0, len(background_files) - 1))
+        backImgNum = int(np.random.randint(len(background_files), size=1))
         backImg = cv2.imread(str(background_files[backImgNum]))
         backImg, corners = overlay_object(backImg, img, img_mask, polygon)
         if len(corners.exterior.coords.xy[0]) != 0:
             object_corners[polygon_file.parent.name] = corners
-        add_object_num = int(random.uniform(0, len(objects)))
-        chosen = np.random.choice([o for o in objects if o not in object_corners.keys()], add_object_num)
+        add_object_num = int(np.random.randint(len(objects), size=1))
+        chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
+                                  add_object_num, replace=False)
         for c in chosen:
             add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
             add_polygon = np.load(add_polygon_file)
