@@ -447,9 +447,11 @@ for j, video_file in enumerate(video_files):
             backImg = cv2.resize(backImg, (backW, backH))
 
             # ランダムに上下左右に対象物の位置を移動させる
-            backEdgeMargin = 0.1
-            addX = int( (1.0 - backEdgeMargin) * random.uniform(- backW / 2, backW / 2) )
-            addY = int( (1.0 - backEdgeMargin) * random.uniform(- backH / 2, backH / 2) )
+            # オブジェクトが画面外に出るのを防ぐためエッジ付近への配置を禁止する（オブジェクト動画が常に画面中央を通る場合は不要）
+            x_edge_margin = affine_img.shape[0]/4
+            y_edge_margin = affine_img.shape[1]/4
+            addX = int(random.uniform(x_edge_margin, backW - x_edge_margin) - affine_img.shape[0]/2)
+            addY = int(random.uniform(y_edge_margin, backH - y_edge_margin) - affine_img.shape[1]/2)
 
             # コントローラを重畳する
             for y in range(affine_img.shape[0]):
