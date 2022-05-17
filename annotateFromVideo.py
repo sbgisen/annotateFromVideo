@@ -422,9 +422,9 @@ for j, video_file in enumerate(video_files):
 
         for count in range(10):
             scale = random.uniform(0.6, 1.2)
+            degree = random.uniform(-30, 30)
             objectW = smallWidth
             objectH = smallHeight
-            degree = random.uniform(-30, 30)
             randomMat = cv2.getRotationMatrix2D(
                 (int(objectW/2), int(objectH/2)), degree, scale)
             print(randomMat)
