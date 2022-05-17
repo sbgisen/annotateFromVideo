@@ -354,13 +354,15 @@ for j, video_file in enumerate(video_files):
         kernel = np.ones((3, 3), np.uint8)    # 収縮用のカーネル
         kernel2 = np.ones((1, 1), np.uint8)    # 収縮用のカーネル
         img_gray = cv2.cvtColor(img2_small, cv2.COLOR_RGB2GRAY)
-        ret, img_bin = cv2.threshold(img_gray, 2, 255, cv2.THRESH_BINARY)
+        ret, img_bin = cv2.threshold(img_gray, 10, 255, cv2.THRESH_BINARY)
 
         # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
-        img_bin = cv2.erode(img_bin, kernel, iterations=3)
-        img_bin = cv2.dilate(img_bin, kernel, iterations=4)
+        img_bin = cv2.erode(img_bin, kernel, iterations=1)
+        # img_bin = cv2.dilate(img_bin, kernel, iterations=4)
         # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
         # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
+        mask_bin = np.where((img_bin == 0), 0, 1).astype('uint8')
+        img2_small = img2_small * mask_bin[:, :, np.newaxis]
 
         # print("before tracking : " + str(time.time() - startTime))
 
@@ -389,9 +391,9 @@ for j, video_file in enumerate(video_files):
             cv2.circle(img_raw, (int(x1 * rateX), int(y1 * rateY)),
                        2, (0, 0, 255), -1)
 
-        img2_small[img_contour == 129] = (255, 0, 0)
-        img2_small[img_contour == 200] = (0, 255, 0)
-        img2_small[img_contour == 255] = (0, 0, 255)
+        # img2_small[img_contour == 129] = (255, 0, 0)
+        # img2_small[img_contour == 200] = (0, 255, 0)
+        # img2_small[img_contour == 255] = (0, 0, 255)
 
         img2_temp = cv2.resize(img2_small, (smallWidth, smallHeight))
 
@@ -422,12 +424,14 @@ for j, video_file in enumerate(video_files):
             print(randomMat)
 
             affine_img = cv2.warpAffine(
-                img_temp, randomMat, (smallWidth, smallHeight))
+                img2_temp, randomMat, (smallWidth, smallHeight))
+            _, affine_bin = cv2.threshold(affine_img, 10, 1, cv2.THRESH_BINARY)
+            affine_img = affine_img * affine_bin[:, :]
             # cv2.imshow('affine_img',affine_img)
 
             backImg = cv2.imread(str(background_files[backImgNum]))
             # 背景画像のHeight
-            backH = int(backImg.shape[1] * backImg.shape[0] / smallWidth)
+            backH = int(backImg.shape[0] * smallWidth / backImg.shape[1])
             backImg = cv2.resize(backImg, (smallWidth, backH))
 
             # ランダムに上下左右に対象物の位置を移動させる
