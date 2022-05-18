@@ -576,17 +576,13 @@ for polygon_file in polygon_files:
                     try:
                         object_corners[key] = object_corners[key].difference(corners)
                     except BaseException:
-                        if not object_corners[key].is_valid:
-                            object_corners[key] = object_corners[key].buffer(0).geoms[0]
-                        if object_corners[key].is_valid:
-                            object_corners[key] = object_corners[key].difference(corners)
-                        else:
-                            failed = True
+                        failed = True
+                        break
+                if failed:
+                    break
                 if len(corners.exterior.coords.xy[0]) != 0:
                     object_corners[add_polygon_file.parent.name] = corners
 
-                if failed:
-                    break
             if not failed:
                 outputResults(output_path, f"{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}",
                               backImg, filePath, object_corners, 1, 1, backImg.shape[1], backImg.shape[0])
