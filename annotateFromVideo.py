@@ -548,10 +548,10 @@ for polygon_file in polygon_files:
     img = cv2.imread(base_name + '.jpg')
     img_mask = cv2.imread(base_name + '_mask.jpg')
     for count in range(10):
-        object_corners = {}
         # TODO: Check added and subtracted polygon is valid.
         retry = 5  # To avoid to calculate polygon difference bug.
         for i in range(retry):
+            object_corners = {}
             filePath = f"{output_path}/{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}.json"
             if pathlib.Path(filePath).exists():
                 print(str(filePath) + " is already done!")
