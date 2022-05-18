@@ -468,11 +468,8 @@ for j, video_file in enumerate(video_files):
         img_gray = cv2.cvtColor(img2_small, cv2.COLOR_RGB2GRAY)
         ret, img_bin = cv2.threshold(img_gray, 10, 255, cv2.THRESH_BINARY)
 
-        # img_bin = cv2.dilate(img_bin, kernel, iterations=1)
-        img_bin = cv2.erode(img_bin, kernel, iterations=3)
-        # img_bin = cv2.dilate(img_bin, kernel, iterations=4)
-        # img_bin = cv2.erode(img_bin, kernel2, iterations=1)
-        # img_bin = cv2.dilate(img_bin, kernel2, iterations=6)
+        img_bin = cv2.erode(img_bin, kernel, iterations=3) # Default : iterations=3
+        img_bin = cv2.dilate(img_bin, kernel, iterations=1) # Default : iterations=4
         mask_bin = np.where((img_bin == 0), 0, 1).astype('uint8')
         img2_small = img2_small * mask_bin[:, :, np.newaxis]
 
