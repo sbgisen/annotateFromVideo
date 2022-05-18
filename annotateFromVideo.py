@@ -232,8 +232,8 @@ def outputResults(
 def overlay_object(back_img, object_img, object_mask, corner):
     size = random.uniform(0.6, 1.2)
     degree = random.uniform(-30, 30)
-    centerX = random.random()
-    centerY = random.random()
+    centerX = 0.5
+    centerY = 0.5
     randomMat = cv2.getRotationMatrix2D(
         (int(smallWidth * centerX), int(smallHeight * centerY)), degree, size)
     affine_img = cv2.warpAffine(
@@ -248,8 +248,8 @@ def overlay_object(back_img, object_img, object_mask, corner):
     backImg = cv2.resize(back_img, (smallWidth, backH))
 
     # ランダムに上下左右に対象物の位置を移動させる
-    addX = int(random.uniform(-smallWidth / 4, smallWidth / 2))
-    addY = int(random.uniform(0, backImg.shape[0] * 2 / 3))
+    addX = int(random.uniform(0, smallWidth) - smallWidth / 2)
+    addY = int(random.uniform(0, backH) - smallHeight / 2)
 
     # コントローラを重畳する
     for y in range(smallHeight):
@@ -268,7 +268,7 @@ def overlay_object(back_img, object_img, object_mask, corner):
                 continue
 
             # print(x,y,addX,addY)
-            if affine_img[y][x][0] != 0:  # TODO:out of rangeの発生を防ぐ
+            if affine_img[y][x][0] != 0 or affine_img[y][x][1] != 0 or affine_img[y][x][2] != 0:  # TODO:out of rangeの発生を防ぐ
                 backImg[addY + y][addX + x] = affine_img[y][x]
 
     expandCorners = []
