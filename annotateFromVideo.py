@@ -6,6 +6,10 @@ import time
 
 import cv2
 import numpy as np
+from shapely.geometry import Polygon
+from shapely.geometry.collection import GeometryCollection
+from shapely.geometry.multilinestring import MultiLineString
+from shapely.geometry.multipolygon import MultiPolygon
 
 # from matplotlib import pyplot as plt
 
@@ -168,16 +172,14 @@ def cornerReduction(corners):
 def outputResults(
         output_path,
         videoTime,
-        img_raw,
         img,
         filePath,
-        labelName,
-        importantCorners,
+        corners,
         rateX,
         rateY,
         smallWidth,
         smallHeight):
-    cv2.imwrite("./contourResults/" + videoTime + ".jpg", img_raw)
+    print(f"{output_path}/" + videoTime + ".jpg")
     cv2.imwrite(f"{output_path}/" + videoTime + ".jpg", img)
 
     # Base64で画像を文字列化したものをjsonファイルに含める必要あり
@@ -189,24 +191,34 @@ def outputResults(
         f.write("\t\"version\": \"3.16.2\",\n")
         f.write("\t\"flags\": {},\n")
         f.write("\t\"shapes\": [\n")
-        f.write("\t\t{\n")
-        f.write("\t\t\t\"label\": \"" + labelName + "\",\n")
-        f.write("\t\t\t\"line_color\": null,\n")
-        f.write("\t\t\t\"fill_color\": null,\n")
+        for i, (k, v) in enumerate(corners.items()):
+            if type(v) in [MultiPolygon, MultiLineString]:
+                continue
+            elif isinstance(v, GeometryCollection):
+                v = v.geoms[0]
+                if not isinstance(v, Polygon):
+                    continue
 
-        f.write("\t\t\t\"points\": [\n")
-        for index in range(len(importantCorners) - 1):  # 輪郭の描画
-            x1 = importantCorners[index][0]  # 今見ている点
-            y1 = importantCorners[index][1]  # 今見ている点
-            f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "],\n")
-        x1 = importantCorners[len(importantCorners) - 1][0]  # 今見ている点
-        y1 = importantCorners[len(importantCorners) - 1][1]  # 今見ている点
-        f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "]\n")
-        f.write("\t\t\t],\n")
+            f.write("\t\t{\n")
+            f.write("\t\t\t\"label\": \"" + k + "\",\n")
+            f.write("\t\t\t\"line_color\": null,\n")
+            f.write("\t\t\t\"fill_color\": null,\n")
 
-        f.write("\t\t\t\"shape_type\": \"polygon\",\n")
-        f.write("\t\t\t\"flags\": {}\n")
-        f.write("\t\t}\n")
+            f.write("\t\t\t\"points\": [\n")
+            x, y = v.exterior.coords.xy
+            for xy in zip(x[:-1], y[:-1]):  # 輪郭の描画
+                x1 = xy[0]  # 今見ている点
+                y1 = xy[1]  # 今見ている点
+                f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "],\n")
+            if x and y:
+                x1 = x[len(x) - 1]  # 今見ている点
+                y1 = y[len(y) - 1]  # 今見ている点
+                f.write("\t\t\t\t[" + str(x1 * rateX) + "," + str(y1 * rateY) + "]\n")
+            f.write("\t\t\t],\n")
+
+            f.write("\t\t\t\"shape_type\": \"polygon\",\n")
+            f.write("\t\t\t\"flags\": {}\n")
+            f.write("\t\t}\n" if i == len(corners.keys()) - 1 else "\t\t},\n")
         f.write("\t],\n")
         f.write("\t\"lineColor\": [0,255,0,128],\n")
         f.write("\t\"fillColor\": [255,0,0,128],\n")
@@ -215,6 +227,104 @@ def outputResults(
         f.write("\t\"imageHeight\": " + str(smallHeight) + ",\n")
         f.write("\t\"imageWidth\": " + str(smallWidth) + "\n")
         f.write("}")
+
+
+def overlay_object(back_img, object_img, object_mask, corner):
+    size = random.uniform(0.6, 1.2)
+    degree = random.uniform(-30, 30)
+    centerX = random.random()
+    centerY = random.random()
+    randomMat = cv2.getRotationMatrix2D(
+        (int(smallWidth * centerX), int(smallHeight * centerY)), degree, size)
+    affine_img = cv2.warpAffine(
+        object_img, randomMat, (smallWidth, smallHeight))
+    affine_mask = cv2.warpAffine(
+        object_mask, randomMat, (smallWidth, smallHeight))
+    affine_gray = cv2.cvtColor(affine_mask, cv2.COLOR_RGB2GRAY)
+    _, affine_bin = cv2.threshold(affine_gray, 10, 1, cv2.THRESH_BINARY)
+    affine_img = affine_img * affine_bin[:, :, np.newaxis]
+
+    backH = int(back_img.shape[0] * smallWidth / back_img.shape[1])
+    backImg = cv2.resize(back_img, (smallWidth, backH))
+
+    # ランダムに上下左右に対象物の位置を移動させる
+    addX = int(random.uniform(-smallWidth / 4, smallWidth / 2))
+    addY = int(random.uniform(0, backImg.shape[0] * 2 / 3))
+
+    # コントローラを重畳する
+    for y in range(smallHeight):
+        if affine_img.shape[0] <= y:
+            continue
+
+        for x in range(smallWidth):
+            if affine_img.shape[1] <= x:
+                continue
+
+            # backImgに合わせるときにxがはみ出ないか
+            if backImg.shape[1] <= addX + x or addX + x < 0:
+                continue
+            # backImgに合わせるときにxがはみ出ないか
+            elif backImg.shape[0] <= addY + y or addY + y < 0:
+                continue
+
+            # print(x,y,addX,addY)
+            if affine_img[y][x][0] != 0:  # TODO:out of rangeの発生を防ぐ
+                backImg[addY + y][addX + x] = affine_img[y][x]
+
+    expandCorners = []
+
+    all_outside = True
+    for index in range(len(corner)):  # 輪郭の描画
+        x1 = corner[index][0]  # 今見ている点
+        y1 = corner[index][1]  # 今見ている点
+        x2 = corner[(index + 1) % len(corner)][0]  # 次の点
+        y2 = corner[(index + 1) % len(corner)][1]  # 次の点
+
+        # アフィン変換後の座標
+        x1_ = x1 * randomMat[0][0] + y1 * \
+            randomMat[0][1] + randomMat[0][2] + addX
+        y1_ = x1 * randomMat[1][0] + y1 * \
+            randomMat[1][1] + randomMat[1][2] + addY
+        x2_ = x2 * randomMat[0][0] + y2 * \
+            randomMat[0][1] + randomMat[0][2] + addX
+        y2_ = x2 * randomMat[1][0] + y2 * \
+            randomMat[1][1] + randomMat[1][2] + addY
+
+        # アフィン変換後に画面外な輪郭を無視
+        if affine_img.shape[1] <= x1_ - addX:
+            x1_ = affine_img.shape[1] + addX
+        elif x1_ - addX < 0:
+            x1_ = addX
+        elif affine_img.shape[0] <= y1_ - addY:
+            y1_ = affine_img.shape[0] + addY
+        elif y1_ - addY < 0:
+            y1_ = addY
+
+        # 背景画像外にある輪郭を無視
+        if backImg.shape[1] <= x1_:
+            x1_ = backImg.shape[1]
+        elif x1_ - addX < 0:
+            x1_ = 0
+        elif backImg.shape[0] <= y1_:
+            y1_ = backImg.shape[0]
+        elif y1_ < 0:
+            y1_ = 0
+        else:
+            all_outside = False
+        if backImg.shape[1] <= x2_:
+            x2_ = backImg.shape[1]
+        elif x2_ < 0:
+            x2_ = 0
+        elif backImg.shape[0] <= y2_:
+            y2_ = backImg.shape[0]
+        elif y2_ < 0:
+            y2_ = 0
+
+        expandCorners.append([x1_, y1_])
+
+    if all_outside:
+        expandCorners = []
+    return backImg, Polygon(expandCorners)
 
 
 print("run!")
@@ -227,6 +337,7 @@ microWidth = 550  # 輪郭抽出時の処理が多少重たいのでそのとき
 
 # 処理する動画を読み込み、処理に必要な複製等を用意
 video_dir = pathlib.Path('./videos')
+object_dir = pathlib.Path('./cropped_objects')
 video_files = [p for p in video_dir.glob('**/*') if p.is_file() and p.name != '.gitkeep']
 background_files = [p for p in pathlib.Path('./background').glob('*') if p.is_file() and p.name != '.gitkeep']
 
@@ -271,12 +382,9 @@ for j, video_file in enumerate(video_files):
             break
 
         # jsonファイルの出力準備（既にファイルがあった場合は飛ばす）
-        filePath = f"{output_path}/{labelName}_{video_file.stem}_{videoTime}.json"
-        try:
-            with open(filePath, mode='x') as f:
-                print("make file : " + filePath)
-        except BaseException:
-            print(filePath + " is already done!")
+        filePath = object_dir / labelName / f"{video_file.stem}_{videoTime}.jpg"
+        if filePath.exists():
+            print(str(filePath) + " is already done!")
             videoTime += 1
             continue
 
@@ -410,133 +518,69 @@ for j, video_file in enumerate(video_files):
         # key = cv2.waitKey(10)
         # cv2.destroyAllWindows()
 
-        outputResults(output_path, f"{labelName}_{video_file.stem}_{videoTime}", img_raw, img,
-                      filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
+        # outputResults(output_path, f"{labelName}_{video_file.stem}_{videoTime}", img_raw, img,
+        #               filePath, labelName, importantCorners, rateX, rateY, smallWidth, smallHeight)
         # ファイル出力たち
+        (object_dir / labelName).mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}.jpg", img2)
+        cv2.imwrite(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}_mask.jpg", img2_mask)
+        np.save(f"./{object_dir}/{labelName}/{video_file.stem}_{videoTime}_polygon.npy", np.array(resized_points))
 
         # 学習精度向上を目指し、データ拡張を行う
         # for count in range(2):
 
-        for count in range(10):
-            size = random.uniform(0.6, 1.2)
-            degree = random.uniform(-30, 30)
-            backImgNum = int(random.uniform(0, len(background_files) - 1))
-            centerX = random.random()
-            centerY = random.random()
+        # cv2.imshow('back_img', backImg)
+        # # key = cv2.waitKey()
 
-            randomMat = cv2.getRotationMatrix2D(
-                (int(smallWidth * centerX), int(smallHeight * centerY)), degree, size)
-            print(str(background_files[backImgNum]))
-            print(randomMat)
-
-            affine_img = cv2.warpAffine(
-                img2, randomMat, (smallWidth, smallHeight))
-            affine_mask = cv2.warpAffine(
-                img2_mask, randomMat, (smallWidth, smallHeight))
-            affine_gray = cv2.cvtColor(affine_mask,cv2.COLOR_RGB2GRAY)
-            _, affine_bin = cv2.threshold(affine_gray, 10, 255, cv2.THRESH_BINARY)
-            mask_inv = cv2.bitwise_not(affine_gray)
-            _, affine_bin = cv2.threshold(affine_gray, 10, 1, cv2.THRESH_BINARY)
-            affine_img = affine_img * affine_bin[:, :,np.newaxis]
-
-            backImg = cv2.imread(str(background_files[backImgNum]))
-            # 背景画像のHeight
-            backH = int(backImg.shape[0] * smallWidth / backImg.shape[1])
-            backImg = cv2.resize(backImg, (smallWidth, backH))
-
-            # ランダムに上下左右に対象物の位置を移動させる
-            addX = int(random.uniform(-smallWidth / 4, smallWidth / 2))
-            addY = int(random.uniform(0, backImg.shape[0] * 2 / 3))
-
-            # コントローラを重畳する
-            for y in range(smallHeight):
-                if affine_img.shape[0] <= y:
-                    continue
-
-                for x in range(smallWidth):
-                    if affine_img.shape[1] <= x:
-                        continue
-
-                    # backImgに合わせるときにxがはみ出ないか
-                    if backImg.shape[1] <= addX + x or addX + x < 0:
-                        continue
-                    # backImgに合わせるときにxがはみ出ないか
-                    elif backImg.shape[0] <= addY + y or addY + y < 0:
-                        continue
-
-                    # print(x,y,addX,addY)
-                    if affine_img[y][x][0] != 0:  # TODO:out of rangeの発生を防ぐ
-                        backImg[addY + y][addX + x] = affine_img[y][x]
-
-            visualizedImg = backImg.copy()
-            expandCorners = []
-
-            for index in range(len(importantCorners)):  # 輪郭の描画
-                x1 = importantCorners[index][0]  # 今見ている点
-                y1 = importantCorners[index][1]  # 今見ている点
-                x2 = importantCorners[(index + 1) %
-                                      len(importantCorners)][0]  # 次の点
-                y2 = importantCorners[(index + 1) %
-                                      len(importantCorners)][1]  # 次の点
-
-                # アフィン変換後の座標
-                x1_ = x1 * randomMat[0][0] + y1 * \
-                    randomMat[0][1] + randomMat[0][2] + addX
-                y1_ = x1 * randomMat[1][0] + y1 * \
-                    randomMat[1][1] + randomMat[1][2] + addY
-                x2_ = x2 * randomMat[0][0] + y2 * \
-                    randomMat[0][1] + randomMat[0][2] + addX
-                y2_ = x2 * randomMat[1][0] + y2 * \
-                    randomMat[1][1] + randomMat[1][2] + addY
-
-                # アフィン変換後に画面外な輪郭を無視
-                if affine_img.shape[1] <= x1_ - addX:
-                    x1_ = affine_img.shape[1] + addX
-                elif x1_ - addX < 0:
-                    x1_ = addX
-                elif affine_img.shape[0] <= y1_ - addY:
-                    y1_ = affine_img.shape[0] + addY
-                elif y1_ - addY < 0:
-                    y1_ = addY
-
-                # 背景画像外にある輪郭を無視
-                if backImg.shape[1] <= x1_:
-                    x1_ = backImg.shape[1]
-                elif x1_ - addX < 0:
-                    x1_ = 0
-                elif backImg.shape[0] <= y1_:
-                    y1_ = backImg.shape[0]
-                elif y1_ < 0:
-                    y1_ = 0
-                if backImg.shape[1] <= x2_:
-                    x2_ = backImg.shape[1]
-                elif x2_ < 0:
-                    x2_ = 0
-                elif backImg.shape[0] <= y2_:
-                    y2_ = backImg.shape[0]
-                elif y2_ < 0:
-                    y2_ = 0
-
-                expandCorners.append([x1_, y1_])
-
-                # 輪郭の視覚化
-                cv2.line(visualizedImg, (int(x1_ * rateX), int(y1_ * rateY)),
-                         (int(x2_ * rateX), int(y2_ * rateY)), (255, 0, 0), 2)
-                cv2.circle(visualizedImg, (int(x1_ * rateX),
-                           int(y1_ * rateY)), 2, (0, 0, 255), -1)
-
-            filePath = f"{output_path}/{labelName}_{video_file.stem}_{videoTime}_{count}.json"
-
-            if len(expandCorners) <= 0:
-                continue
-            outputResults(output_path, f"{labelName}_{video_file.stem}_{videoTime}_{count}", visualizedImg,
-                          backImg, filePath, labelName, expandCorners, 1, 1, backImg.shape[1], backImg.shape[0])
-
-        cv2.imshow('back_img', backImg)
-        # key = cv2.waitKey()
-
-        print("imwrite time : " + str(time.time() - startTime))
+        # print("imwrite time : " + str(time.time() - startTime))
 
         videoTime += 1
 
     # cv2.waitKey()
+polygon_files = list(object_dir.glob('**/*.npy'))
+objects = list(set([p.parent.name for p in polygon_files]))
+for polygon_file in polygon_files:
+    polygon = np.load(polygon_file)
+    base_name = str(polygon_file).rsplit('_', 1)[0]
+    img = cv2.imread(base_name + '.jpg')
+    img_mask = cv2.imread(base_name + '_mask.jpg')
+    for count in range(10):
+        # TODO: Check added and subtracted polygon is valid.
+        retry = 5  # To avoid to calculate polygon difference bug.
+        for i in range(retry):
+            object_corners = {}
+            filePath = f"{output_path}/{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}.json"
+            if pathlib.Path(filePath).exists():
+                print(str(filePath) + " is already done!")
+                continue
+            backImgNum = int(np.random.randint(len(background_files), size=1))
+            backImg = cv2.imread(str(background_files[backImgNum]))
+            backImg, corners = overlay_object(backImg, img, img_mask, polygon)
+            if len(corners.exterior.coords.xy[0]) != 0:
+                object_corners[polygon_file.parent.name] = corners
+            add_object_num = int(np.random.randint(len(objects), size=1))
+            chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
+                                      add_object_num, replace=False)
+            failed = False
+            for c in chosen:
+                add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
+                add_polygon = np.load(add_polygon_file)
+                add_base_name = str(add_polygon_file).rsplit('_', 1)[0]
+                add_img = cv2.imread(add_base_name + '.jpg')
+                add_img_mask = cv2.imread(add_base_name + '_mask.jpg')
+                backImg, corners = overlay_object(backImg, add_img, add_img_mask, add_polygon)
+                for key in object_corners.keys():
+                    try:
+                        object_corners[key] = object_corners[key].difference(corners)
+                    except BaseException:
+                        failed = True
+                        break
+                if failed:
+                    break
+                if len(corners.exterior.coords.xy[0]) != 0:
+                    object_corners[add_polygon_file.parent.name] = corners
+
+            if not failed:
+                outputResults(output_path, f"{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}",
+                              backImg, filePath, object_corners, 1, 1, backImg.shape[1], backImg.shape[0])
+                break
