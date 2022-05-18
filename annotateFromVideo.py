@@ -465,7 +465,7 @@ for j, video_file in enumerate(video_files):
                         continue
 
                     # print(x,y,addX,addY)
-                    if affine_img[y][x][0] != 0:  # TODO:out of rangeの発生を防ぐ
+                    if affine_img[y][x][0] != 0 or affine_img[y][x][1] != 0 or affine_img[y][x][2] != 0:  # TODO:out of rangeの発生を防ぐ
                         backImg[addY + y][addX + x] = affine_img[y][x]
 
             visualizedImg = backImg.copy()
