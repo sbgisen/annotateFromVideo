@@ -549,34 +549,41 @@ for polygon_file in polygon_files:
     img_mask = cv2.imread(base_name + '_mask.jpg')
     for count in range(10):
         object_corners = {}
-        filePath = f"{output_path}/{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}.json"
-        if pathlib.Path(filePath).exists():
-            print(str(filePath) + " is already done!")
-            continue
-        backImgNum = int(np.random.randint(len(background_files), size=1))
-        backImg = cv2.imread(str(background_files[backImgNum]))
-        backImg, corners = overlay_object(backImg, img, img_mask, polygon)
-        if len(corners.exterior.coords.xy[0]) != 0:
-            object_corners[polygon_file.parent.name] = corners
-        add_object_num = int(np.random.randint(len(objects), size=1))
-        chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
-                                  add_object_num, replace=False)
-        for c in chosen:
-            add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
-            add_polygon = np.load(add_polygon_file)
-            add_base_name = str(add_polygon_file).rsplit('_', 1)[0]
-            add_img = cv2.imread(add_base_name + '.jpg')
-            add_img_mask = cv2.imread(add_base_name + '_mask.jpg')
-            backImg, corners = overlay_object(backImg, add_img, add_img_mask, add_polygon)
-            for key in object_corners.keys():
-                try:
-                    object_corners[key] = object_corners[key].difference(corners)
-                except BaseException:
-                    if not object_corners[key].is_valid:
-                        object_corners[key] = object_corners[key].buffer(0).geoms[0]
-                    object_corners[key] = object_corners[key].difference(corners)
-            if len(corners.exterior.coords.xy[0]) != 0:
-                object_corners[add_polygon_file.parent.name] = corners
+        # TODO: Check added and subtracted polygon is valid.
+        retry = 5  # To avoid to calculate polygon difference bug.
+        for i in range(retry):
+            try:
+                filePath = f"{output_path}/{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}.json"
+                if pathlib.Path(filePath).exists():
+                    print(str(filePath) + " is already done!")
+                    continue
+                backImgNum = int(np.random.randint(len(background_files), size=1))
+                backImg = cv2.imread(str(background_files[backImgNum]))
+                backImg, corners = overlay_object(backImg, img, img_mask, polygon)
+                if len(corners.exterior.coords.xy[0]) != 0:
+                    object_corners[polygon_file.parent.name] = corners
+                add_object_num = int(np.random.randint(len(objects), size=1))
+                chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
+                                          add_object_num, replace=False)
+                for c in chosen:
+                    add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
+                    add_polygon = np.load(add_polygon_file)
+                    add_base_name = str(add_polygon_file).rsplit('_', 1)[0]
+                    add_img = cv2.imread(add_base_name + '.jpg')
+                    add_img_mask = cv2.imread(add_base_name + '_mask.jpg')
+                    backImg, corners = overlay_object(backImg, add_img, add_img_mask, add_polygon)
+                    for key in object_corners.keys():
+                        try:
+                            object_corners[key] = object_corners[key].difference(corners)
+                        except BaseException:
+                            if not object_corners[key].is_valid:
+                                object_corners[key] = object_corners[key].buffer(0).geoms[0]
+                            object_corners[key] = object_corners[key].difference(corners)
+                    if len(corners.exterior.coords.xy[0]) != 0:
+                        object_corners[add_polygon_file.parent.name] = corners
 
-        outputResults(output_path, f"{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}",
-                      backImg, filePath, object_corners, 1, 1, backImg.shape[1], backImg.shape[0])
+                outputResults(output_path, f"{polygon_file.parent.name}_{base_name.split('/')[-1]}_{count}",
+                              backImg, filePath, object_corners, 1, 1, backImg.shape[1], backImg.shape[0])
+                break
+            except BaseException:
+                pass
