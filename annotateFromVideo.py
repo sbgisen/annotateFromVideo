@@ -322,7 +322,7 @@ def overlay_object(back_img, object_img, object_mask, corner):
 
         expandCorners.append([x1_, y1_])
 
-    if all_outside:
+    if all_outside or len(expandCorners) < 3:
         expandCorners = []
     return backImg, Polygon(expandCorners)
 
