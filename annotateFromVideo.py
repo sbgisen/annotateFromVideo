@@ -36,7 +36,7 @@ def grabWithImg(mask2, last):
 
     ret = img_raw * mask3[:, :, np.newaxis]
 
-    cv2.imshow("ret", ret)
+    # cv2.imshow("ret", ret)
     # 背景を白にする。
     ret_white_background = ret.copy()
     black = [0, 0, 0]
@@ -431,8 +431,8 @@ for j, video_file in enumerate(video_files):
             cv2.imshow("mask", mask * 85)
             # mask[mask == 255] = 1 # いらない気がする
 
-            cv2.imshow('raw', img_raw)
-            cv2.imshow('newmask2', newmask2)
+            # cv2.imshow('raw', img_raw)
+            # cv2.imshow('newmask2', newmask2)
             cv2.imshow('img_temp', img_temp_background_white)
 
             key = cv2.waitKey(20)
@@ -512,8 +512,8 @@ for j, video_file in enumerate(video_files):
         # img2_temp = cv2.resize(img2_small, (smallWidth, smallHeight))
 
         # 出力結果の確認
-        cv2.imshow('img_bin', img_bin)
-        cv2.imshow('img_contour', img_contour)
+        # cv2.imshow('img_bin', img_bin)
+        # cv2.imshow('img_contour', img_contour)
         cv2.imshow('img_raw', img_raw)
         # key = cv2.waitKey(10)
         # cv2.destroyAllWindows()
@@ -559,8 +559,11 @@ for polygon_file in polygon_files:
             if len(corners.exterior.coords.xy[0]) != 0:
                 object_corners[polygon_file.parent.name] = corners
             add_object_num = int(np.random.randint(len(objects), size=1))
-            chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
-                                      add_object_num, replace=False)
+            if(len(objects) != 1):
+                chosen = np.random.choice([o for o in objects if o not in object_corners.keys()],
+                                         add_object_num, replace=False)
+            else:
+                chosen = []
             failed = False
             for c in chosen:
                 add_polygon_file = np.random.choice(list(object_dir.glob(f'{c}/*.npy')), 1)[0]
